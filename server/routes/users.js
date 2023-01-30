@@ -4,6 +4,7 @@ const Token = require("../models/token");
 const crypto = require("crypto");
 const sendEmail = require("../utils/sendEmail");
 const bcrypt = require("bcrypt");
+const BASE_URL = 'http://localhost:3000/'
 
 router.post("/", async (req, res) => {
 	try {
@@ -26,7 +27,7 @@ router.post("/", async (req, res) => {
 			userId: user._id,
 			token: crypto.randomBytes(32).toString("hex"),
 		}).save();
-		const url = `${process.env.BASE_URL}users/${user.id}/verify/${token.token}`;
+		const url = `${BASE_URL}users/${user.id}/verify/${token.token}`;
 		await sendEmail(user.email, "Verify Email", url);
 
 		res
@@ -41,15 +42,19 @@ router.post("/", async (req, res) => {
 router.get("/:id/verify/:token/", async (req, res) => {
 	try {
 		const user = await User.findOne({ _id: req.params.id });
+		//console.log(user)
 		if (!user) return res.status(400).send({ message: "Invalid link" });
-
+        
 		const token = await Token.findOne({
 			userId: user._id,
 			token: req.params.token,
 		});
+
+		console.log(token);
 		if (!token) return res.status(400).send({ message: "Invalid link" });
 
-		await User.updateOne({ _id: user._id, verified: true });
+		const verified = await User.findOneAndUpdate({_id:user._id},{verified:true},{new:true});
+		console.log(verified)
 		await token.remove();
 
 		res.status(200).send({ message: "Email verified successfully" });
